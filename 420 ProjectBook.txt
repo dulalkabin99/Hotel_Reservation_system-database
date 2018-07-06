@@ -1,0 +1,941 @@
+
+1.	Add a new hotel: Create a new hotel with appropriate information about the hotel as input parameters
+
+--creation of procedure
+create or replace procedure hotel_entry
+	(
+	   Hcode  in  HOTELS.HOTEL_CODE%type, 
+	   Haddr  in  HOTELS.HOTEL_ADDR%type,
+	   Hcity   in HOTELS.HOTEL_CITY%type,
+	   Hstate  in HOTELS.HOTEL_STATE%type,
+	   HZipcode in    HOTELS.HOTEL_ZIP_CODE%type,
+	   HPhone in HOTELS.Hotel_phone%type,
+	   Hstatus  in    HOTELS.HOTEL_STATUS%type 
+	)
+	is
+	begin
+	insert into hotels values (hcode, Haddr, Hcity, Hstate, HZipcode,HPhone, Hstatus);
+	   dbms_output.put_line('Hotel inserted successfully, Your new Hotel code is' ||' '|| hcode);
+	 exception
+	when dup_val_on_index then
+	dbms_output.put_line('Hotel Already exists');
+    
+	END;
+	
+-- Execute Procedure	
+set serveroutput on
+Begin
+HOTEL_ENTRY(hotels_code_seq, '24 bukhingham palace', 'NewPort', 'VA', '20170', '702-523-1211', 'Open');
+end;
+==================================================================================================================================================
+
+2.	Find a hotel: Provide as input the address of the hotel and return its hotel ID
+
+create or replace procedure Find_hotel(ad in varchar2)
+as 
+h_code HOTELS.HOTEL_CODE%type;
+begin
+select hotel_code into h_code from hotels where HOTEL_ADDR = ad;
+DBMS_OUTPUT.put_line('The code of the selected hotel is  '||h_code);
+
+end;
+
+
+set serveroutput on
+Begin
+find_hotel('24 bukhingham palace');
+end;
+
+=====================================================================================================================================
+3.	Sell existing hotel: Sell a hotel by providing its hotel ID. Mark it as sold, do not delete the record.
+
+create or replace procedure Sold_hotel ( Hcode in varchar2) as 
+hotel_stat hotels.hotel_status%type;
+sold_ex EXCEPTION;
+begin
+select hotel_status into hotel_stat from hotels where hotel_code=hcode;
+
+if hotel_stat = 'Sold' then
+raise sold_ex;
+else 
+update hotels set hotel_status = 'Sold' where HOTEL_CODE = Hcode;
+update rooms set room_status = 'Inactive' where hotel_code= hcode;
+dbms_output.put_line ('Hotel '||hcode||' successfully sold');
+end if;
+exception
+when sold_ex then
+dbms_output.put_line ('Hotel '||hcode||' already sold');
+end;
+
+
+--execute
+set serveroutput on
+Begin 
+SOLD_HOTEL('1008');
+end;
+
+=======================================================================================================================================
+7.	Make a reservation: Input parameters: Hotel ID, guest’s name, start date, end date, room type, date of reservation, etc. 
+Output: reservation ID (this is called confirmation code in real-life). 
+NOTE: Only one guest per reservation. However, the same guest can make multiple reservations
+
+--function to check if the hotel exist, if exist it return the Hotel code if not it return -1
+create or replace function check_hotel(Hotel_c in number) return number
+is 
+Hcode number;
+begin
+select hotel_code into Hcode from hotels  where Hotel_code = hotel_c;
+return hcode;
+
+exception
+when no_data_found then
+return -1;
+end;
+-------------------------------------------------------------------------------------------------------------------
+--function  to check if the customer exist, if exist it return the customer code if not it print out the exception
+
+create or replace function check_customer(cust_code in number) return number
+is 
+custcode H_customers.customer_code%type;
+begin
+select customer_code into custCode from H_customers  where Customer_code = cust_code;
+return custcode;
+
+exception
+when no_data_found then
+
+return -1;
+end;
+---------------------------------------------------------------------------------------------------------------
+------function  to get room number ( input, hotel code, customer code,  check in date and check out date and number of guest)
+create or replace function get_room (hotel_c in number,in_date in date, out_date in date, room_d in varchar2, Num_bed in number ) return number
+is 
+room_num rooms.room_code%type;
+begin
+-- returns a available room on the specified hotel on the specified  date
+select r.room_code into room_num from rooms R, room_types RT where
+RT.room_desc = room_d and 
+RT.NO_OF_BEDS = Num_bed and 
+R.Room_status = 'open' and
+R.hotel_code = hotel_c and
+RT.room_type_code = R.Room_type_code And
+R.room_code not in (select room_code from RESERVATIONS where check_in_date = in_date and check_out_date = Out_date and reservation_stat = 'Booked') and 
+rownum <2;
+return room_num;
+ 
+exception
+when no_data_found then
+
+return -1;
+end;
+------------------------------------------------------------------------------------------------------
+
+
+-- main procedure to make reservation
+create or replace Procedure reserve_room 
+( cust_code in number, hotel_c in number, G_name in varchar2,in_date in date, out_date in date, Total_guests in number, room_d in varchar2, Num_bed in number
+)
+as
+roomno number;
+Hcode number;
+custcode number;
+no_customer exception;
+no_hotel exception;
+no_room exception;
+
+
+BEGIN
+Hcode:=  check_hotel(hotel_c);--calling  Check_hotel function
+Custcode:= Check_customer (cust_code);--calling  check_customer function
+roomno:= get_room(Hotel_c, in_date, out_date, room_d, Num_bed);-- Gets rom number and set to RoomNo
+
+
+
+--check if anything went wrong and prints what went wrong
+if hcode<1 then 
+dbms_output.put_line ('Hotel '||Hotel_c||' Does not Exist');
+elsif Custcode<1 then
+dbms_output.put_line ('The customer ID is invalid, Please Enter the corrrect Customer ID');
+dbms_output.put_line ('If You are New Customer, Please Sign UP');
+elsif roomno<1 then
+dbms_output.put_line ('There are no room available of this type in this hotel, Please Change your Room types or look for a new hotel');
+else
+Insert into RESERVATIONS (RESERVATION_CODE,GUEST_NAME,CHECK_IN_DATE,CHECK_OUT_DATE,RESERVATION_DATE,NO_OF_GUESTS,CUSTOMER_CODE,HOTEL_CODE,ROOM_CODE,RESERVATION_STAT) 
+values 
+(RESERVE_SEQ.NEXTVAL,G_name,TO_DATE(in_date,'DD-MON-RR'),To_date(Out_date,'DD-MON-RR'),To_date(sysdate,'DD-MON-RR'),total_guests,custcode,hcode,Roomno,'Booked');
+DBMS_output.put_line ('Congratulations, your reservation is booked,');
+DBMS_OUTPUT.PUT_LINE('Your reservation code is: ' || RESERVE_SEQ.CURRVAL);
+
+end if;
+
+END;
+
+---------------------------------------------------------------------------------------------------------
+set serveroutput on
+execute reserve_room(2018021, 1004,'Batman patel','23-APR-18','24-APR-18', 2,'conference',0);
+
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------
+set SERVEROUTPUT ON;
+--Procedure creation to cancle reservation
+create or replace procedure cancelreserrvation(re_code in number)--Giving parameter reservation code 
+as
+begin
+UPDATE RESERVATIONS 
+set Reservation_stat = 'Cancelled'
+where reservation_code = re_code;
+dbms_output.put_line('Your reservation ' || Re_code||'  canceled, sorry to seee you go');-- display the confirmations
+commit;
+exception
+when others then
+rollback;
+end;
+
+set serveroutput on;
+execute cancelreserrvation(100002);
+
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+/*Create or replace function Get_rate(r_code in number) return number
+    is 
+    rate number;
+    ind number;
+    begin
+        select extract (MONTH from check_in_date)into ind from RESERVATIONS where reservation_code = r_code;
+        if ind >= 5 and ind<=8 then
+            rate:=300;
+        else 
+            rate:= 200;
+    end if;
+    return rate;
+    exception
+    when no_data_found then
+    return-1;
+    end;
+
+
+
+--------------------------------------------------------------------------------------------------------------
+
+*/
+
+
+create or replace function get_discount(res_code in number)return number --This will give you the discount percent
+        is
+        Num_days number;
+        dis_percent number;
+    begin 
+        select check_in_date - reservation_date into Num_days from reservations where reservation_code=res_code;
+        if num_days>=60 then
+        dis_percent:=10;
+     else
+        dis_percent:=0;
+      end if;
+        return dis_percent;
+ exception
+    when no_data_found then
+    return-1;
+    end;
+
+	
+------------------------------------------------------get service_total------------------------------------
+
+select sum(RS.Service_rate) from ROOM_SERVICES RS, service_performed SP where
+    RS.service_code=SP.SERVICE_CODE and
+    SP.RESERVATION_CODE = 100001;
+-----------------------------------------------------get_num_days_stayed-------------------------------------
+select check_out_date - check_in_date from RESERVATIONS where reservation_code=100012;
+
+----------------------------------------------------bill generation-----------------------------------------------
+create or replace procedure Generate_Bill (r_code in number)
+is
+rate number;
+Cust_fname varchar2(30);
+Cust_lname varchar2(30);
+num_days number;
+service_total number;
+room_total number;
+discount number;
+Dis number;
+Bill_Total number;
+Net_total number;
+no_data EXCEPTION;
+
+begin
+rate:=Get_rate(r_code);
+    if rate<0 then
+        raise no_data;
+        end if;
+    select check_out_date - check_in_date into Num_days from RESERVATIONS where reservation_code=r_code;
+        if num_days is null then
+        raise no_data;
+         end if;
+    select sum(RS.Service_rate)into service_total from ROOM_SERVICES RS, service_performed SP where
+        RS.service_code=SP.SERVICE_CODE and
+        SP.RESERVATION_CODE = r_code;
+    if service_total is null then
+        service_total:=0;
+     end if;
+    
+     room_total:= num_days *rate;
+     Bill_Total:=(room_total + service_total);
+     discount:= get_discount(r_code);
+     if discount >0 then
+     dis:= ((bill_total* discount)/100);
+     Net_total:= (Bill_total-dis);
+     else 
+     dis:=0;
+     net_total:= Bill_total;
+     End if;
+     
+     select H.customer_Fname, H.customer_lname into cust_fname, cust_lname from H_CUSTOMERS H, RESERVATIONS R where 
+        H.customer_code = R.customer_code and 
+        R.reservation_code = r_code;
+    
+     dbms_output.put_line('Billing date:  ' || to_char(SYSDATE,'YYYY-MM-DD HH24:MI:SS'));
+     dbms_output.put_line('Reservation_code           : ' || R_code);
+      dbms_output.put_line('Customer Name           : ' || Cust_fname ||'  '|| Cust_lname);
+     dbms_output.put_line('Room Total for  ' || Num_days ||'days * $' ||rate||'/day  : $'|| room_total);
+     dbms_output.put_line('Service Total                : $' || service_total);
+     dbms_output.put_line('-----------------------------------------------------');
+     dbms_output.put_line('Bill Total: ----------------> $' || Bill_Total);
+      dbms_output.put_line('Discount percent :  ' || discount ||'%        -$'|| dis);      
+      dbms_output.put_line('================================================');
+      dbms_output.put_line('Total charge:          $'|| net_total);
+     
+     Exception
+when no_data then
+dbms_output.put_line('This reservation does not Exist');
+
+end;
+     
+     Exception
+when no_data then
+dbms_output.put_line('This reservation does not Exist');
+
+end;
+
+set SERVEROUTPUT ON
+execute GENERATE_BILL(1001);
+
+-------------------------------------------------------------Make payment-------------------------------------------------------------------
+
+
+create or replace procedure Make_payment (r_code in number, P_type in varchar2)
+is
+        rate number;
+        num_days number;
+        service_total number;
+        room_total number;
+        discount number;
+        Dis number;
+        Bill_Total number;
+        Net_total number;
+        stat VARCHAR2(20);
+        no_data EXCEPTION;
+        paid exception;
+        Cancelled exception;
+
+
+begin
+            rate:=Get_rate(r_code);
+             if rate<0 then
+            raise no_data;
+            end if;
+        select check_out_date - check_in_date into Num_days from RESERVATIONS where reservation_code=r_code;
+            if num_days is null then
+            raise no_data;
+             end if;
+        select sum(RS.Service_rate)into service_total from ROOM_SERVICES RS, service_performed SP where
+            RS.service_code=SP.SERVICE_CODE and
+            SP.RESERVATION_CODE = r_code;
+        if service_total is null then
+            service_total:=0;
+         end if;
+         select Reservation_stat into stat from reservations where reservation_code=R_code;
+         If stat='checked out' then
+         raise paid;
+         elsif stat='Cancelled' then 
+         raise Cancelled;
+         end if;
+        
+         room_total:= num_days *rate;
+         Bill_Total:=(room_total + service_total);
+         discount:= get_discount(r_code);
+         if discount >0 then
+         dis:= ((bill_total* discount)/100);
+         Net_total:= (Bill_total- dis);
+         else 
+         dis:=0;
+         net_total:= Bill_total;
+         End if;
+         
+         Insert into Bills values ( Billing_code_seq.nextval, r_code,room_total,service_total,Bill_total, dis,Net_total,P_type, sysdate);
+         update reservations set reservation_stat = 'checked out' where reservation_code=R_code;
+         dbms_output.put_line('Payment for Reservation   ' ||r_code||' is completed on  '|| to_char(SYSDATE,'YYYY-MM-DD HH24:MI:SS'));
+         dbms_output.put_line('Thank You for the payment');
+        
+         Exception
+            when no_data then
+            dbms_output.put_line('This reservation does not Exist');
+            when paid then
+            dbms_output.put_line('Reservation is Already paid');
+            when Cancelled then
+            dbms_output.put_line('Reservation is cancelled, No payment necessary');
+
+end;
+
+set SERVEROUTPUT ON
+execute Make_payment(100002, 'Cash');
+---------------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------------add service to current reservation=--------------------------------------------------------------------
+
+create or replace Procedure Add_service (r_code in Number, S_code in number)
+is 
+Cur_code number;
+new_code number;
+Sname varchar(50);
+ch_r number;
+No_service exception;
+No_r exception;
+Begin
+
+select max(service_p_code) into cur_code from SERVICE_PERFORMED;
+new_code:=cur_code +1;
+
+Select service_desc into sname from room_services where SERVICE_CODE=S_code;
+if sname is null then
+raise no_data_found;
+end if;
+
+select reservation_code into Ch_r from reservations where RESERVATION_CODE=R_code;
+if ch_r is null then
+raise no_data_found;
+end if;
+insert into SERVICE_PERFORMED values (New_code,s_code,R_code, sysdate);
+DBMS_OUTPUT.PUT_LINE('Service '||s_code||'('||Sname||') added to reservation '||r_code);
+exception
+when no_data_found then
+DBMS_OUTPUT.PUT_LINE('The inputs are invalid');
+end;
+
+
+Set SERVEROUTPUT ON
+execute add_service(100012,200);
+
+
+------------------------------------------------------------------View services--------------------------------------------------------------------
+
+create or replace Procedure View_services (r_code in Number)
+is 
+cursor c1 is
+select SP.service_P_code, SP.SERVICE_DATE, RS.SERVICE_DESC from service_performed SP, Room_services RS 
+where reservation_code=r_code and SP.service_code=RS.SERVICE_CODE;
+RT c1%rowtype;
+no_data_found EXCEPTION;
+
+begin
+open c1;
+
+loop
+fetch c1 into RT;
+
+exit when c1%NOTFOUND; 
+if RT.service_p_code is null then
+raise no_data_found;
+else
+DBMS_OUTPUT.PUT_LINE('Perform_code: '||RT.service_p_code||'  |  Service Date:  '||RT.service_date||'  |  Service Description: '||RT.service_desc);
+end if;
+end loop;
+close c1;
+
+exception when no_data_found then
+DBMS_OUTPUT.PUT_LINE('There are no More services Performed for this reservation, Or the reservation is invalid ');
+end;
+
+set SERVEROUTPUT ON
+execute view_services(100001);
+
+
+--------------------------------------------------------------Service performed Report by Name---------------------------------------
+
+
+create or replace Procedure Service_report(S_name in varchar2)
+is 
+cursor c1 is
+select RS.service_code, RS.service_desc, R.reservation_code, SP.service_date, R.hotel_code from room_services RS, Service_performed SP, reservations R
+where RS.service_desc= 'restaurant service' and 
+RS.service_code=SP.service_code and 
+SP.reservation_code =R.reservation_code
+order by R.hotel_code;
+RT c1%rowtype;
+
+begin
+open c1;
+DBMS_OUTPUT.PUT_LINE('--------------------------------Service performed report---------------------------------------------');
+DBMS_OUTPUT.PUT_LINE('------------------------------------'||s_name||'----------------------------------------');
+loop
+fetch c1 into RT;
+exit when c1%NOTFOUND; 
+DBMS_OUTPUT.PUT_LINE('Service code: '|| RT.service_code ||'   |  Reservation_code:  '||RT.reservation_code||
+'    |  Service date:  '|| RT.service_date||'     |  Hotel Code:  '||RT.hotel_code);
+end loop;
+close c1;
+end;
+
+
+set serveroutput on
+execute service_report ('movie service');
+
+
+-----------------------------------------------------------------service revenue by Hotel------------------------------------------------------------
+
+
+Create or replace Procedure Service_revenue(H_code in number)
+is 
+Total_r number; 
+H_stat varchar(30);
+No_hotel exception;
+Begin
+select Hotel_status into H_stat from hotels where Hotel_code=H_code;
+if H_stat is null or h_stat = 'sold' then
+raise No_hotel;
+end if;
+select sum(RS.service_rate)  into Total_r from SERVICE_PERFORMED SP, reservations R, ROOM_SERVICES RS where
+SP.RESERVATION_CODE=R.RESERVATION_CODE and 
+SP.SERVICE_CODE=RS.SERVICE_CODE
+and Hotel_code= H_code;
+
+if total_r is null then
+dbms_output.put_line('This hotel does not have any Service revenue yet');
+else
+dbms_output.put_line('Hotel code: '||H_code|| '    |    Total revenue from services:  $'||Total_r);
+
+end if;
+exception
+when no_hotel then
+dbms_output.put_line('This hotel is either sold or does not exist.');
+end;
+
+
+set SERVEROUTPUT ON
+execute service_revenue (1005);
+
+--------------------------------------------------------------------Booked Rooms---------------------------------------------------------------
+
+set SERVEROUTPUT ON
+EXECUTE DISPLAY_ALL_ROOMS;
+
+
+
+create or replace procedure display_all_rooms
+is 
+cursor c1
+is 
+select * from reservations where
+reservation_stat = 'Booked';
+r2 c1%rowtype;
+begin 
+open c1;
+dbms_output.put_line('----------------------------------------Hotel reservations Report--------------------------------------------');
+dbms_output.put_line('-------------------------------------------------------------------------------------------------------------');
+loop
+fetch c1 into r2;
+exit when c1%notfound; 
+dbms_output.put_line('Hotel_code : '|| r2.hotel_code||'           |  Room Code  :'||R2.room_code);
+dbms_output.put_line('Reservation_code :'|| r2.reservation_code||'    | Reservation status : '||r2.reservation_stat);
+dbms_output.put_line('------------------------------------------------------------------------------------');
+end loop;
+close c1;
+exception
+when no_data_found then
+dbms_output.put_line('there is no information available');
+end;
+
+-------------------------------------------------------------------All available Rooms-----------------------------------------------------------
+
+
+
+insert into rooms values(114,1,1003, 'open');
+insert into rooms values(114,1,1004, 'open');
+insert into rooms values(114,1,1005, 'open');
+insert into rooms values(114,1,1006, 'open');
+insert into rooms values(114,1,1007, 'open');
+insert into rooms values(114,1,1009, 'open');
+insert into rooms values(114,1,1010, 'open');
+insert into rooms values(114,1,1001, 'open')
+
+insert into rooms values(115,2,1003, 'open');
+insert into rooms values(115,2,1004, 'open');
+insert into rooms values(115,2,1005, 'open');
+insert into rooms values(115,2,1006, 'open');
+insert into rooms values(115,2,1007, 'open');
+insert into rooms values(115,2,1009, 'open');
+insert into rooms values(115,2,1010, 'open');
+insert into rooms values(115,2,1001, 'open');
+
+insert into rooms values(116,4,1003, 'open');
+insert into rooms values(116,4,1004, 'open');
+insert into rooms values(116,4,1005, 'open');
+insert into rooms values(116,4,1006, 'open');
+insert into rooms values(116,4,1007, 'open');
+insert into rooms values(116,4,1009, 'open');
+insert into rooms values(116,4,1010, 'open');
+insert into rooms values(116,4,1001, 'open');
+
+insert into rooms values(117,5,1003, 'open');
+insert into rooms values(117,5,1004, 'open');
+insert into rooms values(117,5,1005, 'open');
+insert into rooms values(117,5,1006, 'open');
+insert into rooms values(117,5,1007, 'open');
+insert into rooms values(117,5,1009, 'open');
+insert into rooms values(117,5,1010, 'open');
+insert into rooms values(117,5,1001, 'open');
+
+insert into rooms values(118,6,1003, 'open');
+insert into rooms values(118,6,1004, 'open');
+insert into rooms values(118,6,1005, 'open');
+insert into rooms values(118,6,1006, 'open');
+insert into rooms values(118,6,1007, 'open');
+insert into rooms values(118,6,1009, 'open');
+insert into rooms values(118,6,1010, 'open');
+insert into rooms values(118,6,1001, 'open');
+
+insert into rooms values(119,7,1003, 'open');
+insert into rooms values(119,7,1004, 'open');
+insert into rooms values(119,7,1005, 'open');
+insert into rooms values(119,7,1006, 'open');
+insert into rooms values(119,7,1007, 'open');
+insert into rooms values(119,7,1009, 'open');
+insert into rooms values(119,7,1010, 'open');
+insert into rooms values(119,7,1001, 'open');
+
+insert into rooms values(120,1,1003, 'open');
+insert into rooms values(120,2,1004, 'open');
+insert into rooms values(120,3,1005, 'open');
+insert into rooms values(120,4,1006, 'open');
+insert into rooms values(120,5,1007, 'open');
+insert into rooms values(120,6,1009, 'open');
+insert into rooms values(120,7,1010, 'open');
+insert into rooms values(120,7,1001, 'open');
+
+-------------------------------------------------------------------View Available rooms by Hotel-----------------------------------------------
+
+create or replace procedure View_available(H_code in Number)
+is 
+cursor c1 is
+select RT.room_desc, count(RT.room_desc)as Available from rooms R, room_types RT where
+R.Room_status = 'open' and
+R.hotel_code = H_code and
+RT.room_type_code = R.Room_type_code And
+R.room_code not in (select room_code from RESERVATIONS 
+where reservation_stat = 'Booked' and sysdate not between Check_in_date and CHECK_OUT_DATE)
+group by RT.room_desc;
+r2 c1%rowtype;
+
+begin
+open c1;
+DBMS_OUTPUT.PUT_LINE('-----------------------------Available room Type and count in Hotel '|| H_code||'----------------------------');
+DBMS_OUTPUT.PUT_LINE('-----------------------------------------------------------------------------------------------------');
+loop 
+FETCH c1 INTO R2;
+exit when c1%notfound; 
+if c1%rowcount=0 then
+DBMS_OUTPUT.PUT_LINE('Hotel Invalid');
+else
+DBMS_OUTPUT.PUT_LINE('Room Type : '|| R2.room_desc||'           |   Units Available :  '||R2.available);
+end if;
+end Loop;
+
+close c1;
+
+end;
+
+set serveroutput on 
+execute View_available(1001);
+
+-----------------------------------------------------------------------Print receit---------------------------------------------------------------
+create or replace procedure Generate (r_code in number)
+is
+cursor c1
+is 
+
+select R.service_desc, R.SERVICE_RATE, SP.service_date from SERVICE_PERFORMED SP,Room_services R 
+where SP.RESERVATION_CODE=r_code and sp.Service_code=R.SERVICE_CODE ;
+
+r2 c1%rowtype;
+rate number;
+Cust_fname varchar2(30);
+Cust_lname varchar2(30);
+G_name varchar2(60);
+num_days number;
+service_total number;
+room_total number;
+discount number;
+Dis number;
+Bill_Total number;
+Net_total number;
+room_num number;
+Num_bed number;
+Room_D varchar(50);
+H_code number;
+no_data EXCEPTION;
+
+begin
+rate:=Get_rate(r_code);
+    if rate<0 then
+        raise no_data;
+        end if;
+    select check_out_date - check_in_date into Num_days from RESERVATIONS where reservation_code=r_code;
+
+    select hotel_code into H_code from Reservations where reservation_code=R_code;
+
+    select sum(RS.Service_rate)into service_total from ROOM_SERVICES RS, service_performed SP where
+        RS.service_code=SP.SERVICE_CODE and
+        SP.RESERVATION_CODE = r_code;
+
+    select guest_name into G_name from Reservations where reservation_code= r_code;
+
+     room_total:= num_days *rate;
+     Bill_Total:=(room_total + service_total);
+     discount:= get_discount(r_code);
+     if discount >0 then
+     dis:= ((bill_total* discount)/100);
+     Net_total:= (Bill_total-dis);
+     else 
+     dis:=0;
+     net_total:= Bill_total;
+     End if;
+
+     select H.customer_Fname, H.customer_lname into cust_fname, cust_lname from H_CUSTOMERS H, RESERVATIONS R where 
+        H.customer_code = R.customer_code and 
+        R.reservation_code = r_code;
+
+        select RT.room_desc,RT.No_of_beds, RM.room_code into Room_d,Num_bed, Room_num from reservations R, Rooms RM, Room_types RT where
+            R.reservation_code=r_code and
+            RM.hotel_code=H_Code and
+            R.room_code=RM.room_code and 
+            RM.room_type_code =RT.Room_type_code;
+
+     dbms_output.put_line('Billing date:  ' || to_char(SYSDATE,'YYYY-MM-DD HH24:MI:SS'));
+     dbms_output.put_line('Reservation_code : ' || R_code||'      |     Hotel Code : '|| h_code);
+      dbms_output.put_line('Customer Name           : ' || Cust_fname ||'  '|| Cust_lname);
+      dbms_output.put_line('Guest Name           : ' || G_name);
+     dbms_output.put_line('===============================================================');
+        dbms_output.put_line('Room Number: ' || Room_num|| ' |   Room Type: '|| Room_D||'  |   Number of Beds : '|| Num_bed);
+
+     dbms_output.put_line('Room Total for  ' || Num_days ||' days * $' ||rate||'/day           : $'|| room_total);
+         dbms_output.put_line('===============================================================');
+     dbms_output.put_line('Service Total                              :  $' || service_total);
+   
+open c1;
+loop 
+FETCH c1 INTO R2;
+exit when c1%notfound; 
+DBMS_OUTPUT.PUT_LINE(r2.service_date||'   '||r2.service_desc ||'|   rate: $'||r2.service_rate);
+end Loop;
+close c1;
+dbms_output.put_line('===============================================================');
+     dbms_output.put_line('Bill Total: ----------------> $' || Bill_Total);
+      dbms_output.put_line('Discount percent :  ' || discount ||'%      -$'|| dis);      
+    dbms_output.put_line('===============================================================');
+      dbms_output.put_line('Total Amount to be paid                         :$'|| net_total);
+
+     Exception
+when no_data then
+dbms_output.put_line('This reservation does not Exist');
+end;
+
+set SERVEROUTPUT ON
+execute generate(100002);
+
+
+
+-----------------------------------View_services---------------------------------------
+create or replace Procedure View_services (r_code in Number)
+is 
+cursor c1 is
+select SP.service_P_code, SP.SERVICE_DATE, RS.SERVICE_DESC from service_performed SP, Room_services RS 
+where reservation_code=r_code and SP.service_code=RS.SERVICE_CODE;
+RT c1%rowtype;
+rc number;
+excep EXCEPTION;
+
+begin 
+select reservation_code into rc from reservations where reservation_code=r_code;
+if rc <1 then
+raise no_data_found;
+else
+open c1;
+
+loop
+fetch c1 into RT;
+exit when c1%notfound;
+
+DBMS_OUTPUT.PUT_LINE('Perform_code: '||RT.service_p_code||'  |  Service Date:  '||RT.service_date||'  |  Service Description: '||RT.service_desc);
+end loop;
+close c1;
+end if;
+exception
+when no_data_found then
+DBMS_OUTPUT.PUT_LINE('There are no services Performed for this reservation, Or the reservation is invalid ');
+end;
+set SERVEROUTPUT ON
+execute view_services(1001);
+
+
+---------------------------------------------------View Monthly report--------------------------------------------
+create or replace procedure Monthly_report
+is
+ cursor c1 is
+  Select sum(room_charge)as R_revenue, Sum(discount) as Discount ,room_desc from room_income where month=1 group by room_desc;
+  cursor c2 is
+   select sum(service_rate) as S_revenue, service_desc from service_income where month=1 group by SERVICE_DESC;
+    cursor c3 is
+  Select sum(room_charge)as R_revenue, Sum(discount) as Discount ,room_desc from room_income where month=2 group by room_desc;
+  cursor c4 is
+   select sum(service_rate) as S_revenue, service_desc from service_income where month=2 group by SERVICE_DESC;
+    cursor c5 is
+  Select sum(room_charge)as R_revenue, Sum(discount) as Discount ,room_desc from room_income where month=3 group by room_desc;
+  cursor c6 is
+   select sum(service_rate) as S_revenue, service_desc from service_income where month=3 group by SERVICE_DESC;
+
+    R1 c1%rowtype;
+    R2 C2%rowtype;
+     R3 c3%rowtype;
+    R4 C4%rowtype;
+     R5 c5%rowtype;
+    R6 C6%rowtype;
+      
+    
+
+Begin
+
+
+            open c1;
+            dbms_output.put_line ('--------------Monthly Sales Report----------------');
+            dbms_output.put_line ('---------------------------------------------------');
+            dbms_output.put_line ('--------------Report for JANUARY----------------');
+                dbms_output.put_line ('--------Rooms--------');
+            loop
+            fetch c1 into R1; exit when c1%notfound;
+            dbms_output.put_line (R1.room_desc||'          $'|| r1.R_revenue);
+            end loop; 
+           
+            close c1;
+            open c2;
+  
+            dbms_output.put_line ('--------Services---------');
+            loop 
+            fetch c2 into r2; exit when c2%notfound;
+             dbms_output.put_line (R2.service_desc||'          $'|| R2.S_revenue);
+             end loop; close c2;
+             open c3;
+            dbms_output.put_line ('--------------Report for FEBREARY----------------');
+                dbms_output.put_line ('--------Rooms--------');
+  
+            loop
+            fetch c3 into R3; exit when c3%notfound;
+            dbms_output.put_line (R3.room_desc||'          $'||r3.R_revenue);
+            end loop; close c3;
+            open c4;
+       dbms_output.put_line ('--------Services---------');
+            
+            loop 
+            fetch c4 into r4; exit when c4%notfound;
+             dbms_output.put_line (R4.service_desc ||'          $'||R4.S_revenue);
+             end loop; close c4;
+             open c5;
+            dbms_output.put_line ('--------------Report for MARCH----------------');
+                dbms_output.put_line ('--------Rooms--------');
+            loop 
+            fetch c5 into r5; exit when c5%notfound;
+             dbms_output.put_line (R5.room_desc ||'          $'||R5.r_revenue);
+             end loop; close c5;
+             open c6;
+       dbms_output.put_line ('--------Services---------');
+             loop
+             fetch c6 into r6; exit when c6%notfound;
+             dbms_output.put_line (R6.service_desc||'          $'|| R6.S_revenue);
+             end loop; close c6;
+             
+ end;
+             
+        
+
+
+
+    /*
+
+create or replace view Room_income as
+    select B.ROOM_CHARGE , RT.room_desc, B.DISCOUNT, B.total_payment,  extract (MONTH from B.PAYMENT_DATE )as month
+    from reservations R, Rooms RM, Room_types RT, Bills B where
+            RT.ROOM_TYPE_CODE=RM.ROOM_TYPE_CODE and 
+            RM.HOTEL_CODE=R.HOTEL_CODE and
+            RM.ROOM_CODE=R.ROOM_CODE and
+            R.RESERVATION_CODE = B.Reservation_code;
+            
+    
+create or replace view service_income as
+                select RS.SERVICE_DESC, RS.Service_rate , extract (MONTH from SP.SERVICE_DATE )as month from ROOM_SERVICES RS, service_performed SP where
+            RS.service_code=SP.SERVICE_CODE;
+    */
+
+  ------------------------------------------------------------------------------------------------------------------------
+
+  
+  
+  
+  
+  
+  
+  
+-- main procedure to make reservation
+create or replace Procedure reserve_room 
+( cust_code in number, hotel_c in number, G_name in varchar2,in_date in date, out_date in date, Total_guests in number, room_d in varchar2, Num_bed in number
+)
+as
+roomno number;
+Hcode number;
+custcode number;
+no_customer exception;
+no_hotel exception;
+no_room exception;
+
+
+BEGIN
+select hotel_code from hotel_info where hotel_code =5150;
+if hotelc
+select customer_name from resident where customer_id=111;
+
+
+
+
+
+
+Custcode:= Check_customer (cust_code);--calling  check_customer function
+roomno:= get_room(Hotel_c, in_date, out_date, room_d, Num_bed);-- Gets rom number and set to RoomNo
+
+
+
+--check if anything went wrong and prints what went wrong
+if hcode<1 then 
+dbms_output.put_line ('Hotel '||Hotel_c||' Does not Exist');
+elsif Custcode<1 then
+dbms_output.put_line ('The customer ID is invalid, Please Enter the corrrect Customer ID');
+dbms_output.put_line ('If You are New Customer, Please Sign UP');
+elsif roomno<1 then
+dbms_output.put_line ('There are no room available of this type in this hotel, Please Change your Room types or look for a new hotel');
+else
+Insert into RESERVATIONS (RESERVATION_CODE,GUEST_NAME,CHECK_IN_DATE,CHECK_OUT_DATE,RESERVATION_DATE,NO_OF_GUESTS,CUSTOMER_CODE,HOTEL_CODE,ROOM_CODE,RESERVATION_STAT) 
+values 
+(RESERVE_SEQ.NEXTVAL,G_name,TO_DATE(in_date,'DD-MON-RR'),To_date(Out_date,'DD-MON-RR'),To_date(sysdate,'DD-MON-RR'),total_guests,custcode,hcode,Roomno,'Booked');
+DBMS_output.put_line ('Congratulations, your reservation is booked,');
+DBMS_OUTPUT.PUT_LINE('Your reservation code is: ' || RESERVE_SEQ.CURRVAL);
+
+end if;
+
+END;
+  

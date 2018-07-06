@@ -1,0 +1,299 @@
+
+--Create sequence For Hotel_code
+
+ Create sequence hotel_code_seq
+start with 1001 increment by 1;
+
+
+--Create sequence for H_customers
+
+create SEQUENCE H_Customer_code_seq 
+start with 2018000 increment by 1;
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------
+Create Table Commands
+
+--Create Table Hotels
+
+create table hotels ( 
+Hotel_code int not null primary key,
+hotel_addr varchar2(30) not null,
+hotel_city varchar2(30) not null,
+hotel_state varchar2(20 )not null,
+hotel_zip_code varchar2(5) not null,
+Hotel_phone varchar2 (12)
+);
+
+--Create Table Room_type
+
+Create table room_types (
+room_type_code int not null Primary key,
+room_desc varchar2 (50),
+No_of_beds int not null
+);
+
+-- Create Table Rooms
+
+Create Table Rooms (
+Room_code int not null Primary key,
+Room_rate number Not null,
+Room_type_code int not Null,
+hotel_code int Not null,
+foreign key (room_type_code) REFERENCES Room_types(Room_type_code),
+Foreign key (hotel_code) REFERENCES Hotels(Hotel_code)
+);
+
+--Create Table Room_services
+
+Create Table Room_services (
+Service_code int not null primary key,
+service_desc varchar2(50),
+Service_rate number(4)
+);
+
+
+--Create Table H_Customers
+
+Create table H_Customers (
+Customer_code int not null Primary Key,
+Customer_fname varchar2(30) not null,
+customer_lname varchar2(30) not null,
+Customer_addr varchar2 (100),
+customer_city varchar2 (30),
+Customer_state varchar2(20),
+customer_zip_code varchar2 (5),
+customer_phone varchar2 (12)
+);
+
+
+
+Create table reservations (
+
+Create table Reservations (
+Reservation_code int not null primary key,
+Guest_name varchar2(60) not null,
+check_in_date date,
+Check_out_date date,
+reservation_date date,
+No_of_guests int,
+Room_code int,
+customer_code int,
+Foreign key (room_code) REFERENCES Rooms(Room_code),
+Foreign key (Customer_code) REFERENCES H_customers(customer_code),
+);
+
+--Create Table service_performed
+
+create table service_performed (
+service_p_code int primary key,
+service_code int,
+reservation_code int,
+service_date date,
+Foreign key (service_code) REFERENCES Room_services(service_code),
+foreign key (reservation_code) REFERENCES reservations(reservation_code)
+);
+
+
+--Create Table Bill
+
+
+Create table Bill (
+Billing_code int Primary Key,
+Room_charge number,
+Service_charge Number,
+discount number,
+reservation_code int,
+Service_p_code INT,
+foreign key (reservation_code) REFERENCES reservations(reservation_code),
+foreign key (service_p_code) references Service_performed(service_p_code)
+);
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+-- Insert Statements
+
+
+insert into hotels values (HOTEL_CODE_SEQ.NEXTVAL, '8121 wilkens Ave', 'Baltimore', 'MD', '21228', '310-340-0899');
+insert into hotels values (HOTEL_CODE_SEQ.NEXTVAL, '20 marbuck way', 'Elkridge', 'MD', '21075', '443-181-0821');
+insert into hotels values (HOTEL_CODE_SEQ.NEXTVAL, '201 gandhi road', 'Baltimore', 'MD', '21228', '340-340-1812');
+insert into hotels values (HOTEL_CODE_SEQ.NEXTVAL, '8121 paca street', 'Reston', 'VA', '20170', '571-340-2811');
+insert into hotels values (HOTEL_CODE_SEQ.NEXTVAL, '100 sinca street', 'reston', 'VA', '20170', '703-181-8812');
+
+
+UPDATE "IS420_1621_DULKABI1"."HOTELS" SET HOTEL_CODE = '1008' WHERE ROWID = 'AACPQZAAEAAAt9uAAA' AND ORA_ROWSCN = '1865094823'
+UPDATE "IS420_1621_DULKABI1"."HOTELS" SET HOTEL_CODE = '1009' WHERE ROWID = 'AACPQZAAEAAAt9uAAB' AND ORA_ROWSCN = '1865094823'
+UPDATE "IS420_1621_DULKABI1"."HOTELS" SET HOTEL_CODE = '1010' WHERE ROWID = 'AACPQZAAEAAAt9uAAC' AND ORA_ROWSCN = '1865094823'
+
+
+insert into room_types values (1, 'Single/Non smoking', 1);
+Insert into room_types values (2, 'Single/smoking', 1);
+insert into room_types values (3, 'double/Non smoking', 2);
+Insert into room_types values (4, 'double/smoking', 2);
+insert into room_types values (5, 'Single/Suite', 1);
+Insert into room_types values (6, 'double/suite', 2);
+insert into room_types values (7, 'Conference Room', 0);
+
+
+insert into H_customers values (H_CUSTOMER_CODE_SEQ.NEXTVAL,'pratik', 'parajuli', '20 cokey way', 'Cokeysville','MD', 
+'21030', '231-092-0212');
+insert into H_customers values (H_CUSTOMER_CODE_SEQ.NEXTVAL,'Ram', 'Paudel', '20 east bend court', 'Windsor mill','MD',
+ 
+'21244', '231-092-0213');
+
+insert into H_customers values (H_CUSTOMER_CODE_SEQ.NEXTVAL,'Diwakar', 'Sharma', '20 east bend court', 'Windsor mill','MD',
+ 
+'21244', '231-092-0213');
+
+insert into H_customers values (H_CUSTOMER_CODE_SEQ.NEXTVAL,'Hari', 'Bhandari', '20 east bend court', 'Windsor mill','MD',
+ 
+'21244', '231-092-0213');
+
+insert into H_customers values (H_CUSTOMER_CODE_SEQ.NEXTVAL,'krishnai', 'Sharma', '20 east bend court', 'Windsor mill','MD',
+
+'21244', '231-092-0213');
+
+
+
+
+insert into H_customers values (H_CUSTOMER_CODE_SEQ.NEXTVAL,'Sita', 'sharmal', '20 east bend court', 'Windsor mill','MD',
+ 
+'21244', '231-092-0213');
+
+
+insert into room_services values (100,'restaurant services per meal', 20);
+insert into room_services values (200,'Movie Service per view', 5);
+insert into room_services values (300,'Laundry services per time', 10);
+
+insert into rooms values (101, 1, 1001) ;
+insert into rooms values (102, 1, 1001) ;
+insert into rooms values (103, 1, 1001) ;
+insert into rooms values (104, 1, 1001) ;
+insert into rooms values (105, 2, 1001) ;
+insert into rooms values (106, 3, 1001) ;
+insert into rooms values (107, 4, 1001) ;
+insert into rooms values (108, 5, 1001) ;
+insert into rooms values (109, 6, 1001) ;
+insert into rooms values (110, 7, 1001) ;
+insert into rooms values (111, 2, 1001) ;
+insert into rooms values (112, 3, 1001) ;
+....
+....
+....
+....
+insert into rooms values (101, 1, 1009) ;
+insert into rooms values (102, 1, 1009) ;
+insert into rooms values (103, 1, 1009) ;
+insert into rooms values (104, 1, 1009) ;
+insert into rooms values (105, 2, 1009) ;
+insert into rooms values (106, 3, 1009) ;
+insert into rooms values (107, 4, 1009) ;
+insert into rooms values (108, 5, 1009) ;
+insert into rooms values (109, 6, 1009) ;
+insert into rooms values (110, 7, 1009) ;
+insert into rooms values (111, 2, 1009) ;
+insert into rooms values (112, 3, 1009) ;
+
+insert into rooms values (101, 1, 1008) ;
+insert into rooms values (102, 1, 1008) ;
+insert into rooms values (103, 1, 1008) ;
+insert into rooms values (104, 1, 1008) ;
+insert into rooms values (105, 2, 1008) ;
+insert into rooms values (106, 3, 1008) ;
+insert into rooms values (107, 4, 1008) ;
+insert into rooms values (108, 5, 1008) ;
+insert into rooms values (109, 6, 1008) ;
+insert into rooms values (110, 7, 1008) ;
+insert into rooms values (111, 2, 1008) ;
+insert into rooms values (112, 3, 1008) ;
+
+insert into rooms values (101, 1, 1010) ;
+insert into rooms values (102, 1, 1010) ;
+insert into rooms values (103, 1, 1010) ;
+insert into rooms values (104, 1, 1010) ;
+insert into rooms values (105, 2, 1010) ;
+insert into rooms values (106, 3, 1010) ;
+insert into rooms values (107, 4, 1010) ;
+insert into rooms values (108, 5, 1010) ;
+insert into rooms values (109, 6, 1010) ;
+insert into rooms values (110, 7, 1010) ;
+insert into rooms values (111, 2, 1010) ;
+insert into rooms values (112, 3, 1010) ;
+
+
+
+
+insert into reservations values (100001, 'prakriti Gurung', (to_date('2018-06-02', 'yyyy-mm-dd')), 
+(to_date('2018-06-04', 'yyyy-mm-dd')), sysdate, 2,2018001, 1001,101, 'Booked');
+insert into reservations values (100002, 'Ram Paudel', (to_date('2018-05-04', 'yyyy-mm-dd')), 
+(to_date('2018-05-06', 'yyyy-mm-dd')), sysdate, 2,2018002, 1001,101, 'Booked');
+insert into reservations values (100003, 'Diwakar Sharma', (to_date('2018-04-01', 'yyyy-mm-dd')), 
+(to_date('2018-04-04', 'yyyy-mm-dd')), sysdate, 2,2018002, 1001,101, 'Booked');
+insert into reservations values (100004, 'Hari Bhandari', (to_date('2018-04-01', 'yyyy-mm-dd')), 
+(to_date('2018-04-05', 'yyyy-mm-dd')), sysdate, 2,2018003, 1001,101, 'Booked');
+insert into reservations values (100005, 'prakriti Grg', (to_date('2018-04-06', 'yyyy-mm-dd')), 
+(to_date('2018-04-09', 'yyyy-mm-dd')), sysdate, 2,2018004, 1001,101, 'cancelled');
+
+
+
+insert into service_performed values ( 50003, 300, 100001, sysdate);
+insert into service_performed values ( 50002, 200, 100001, sysdate);
+insert into service_performed values ( 50001, 100, 100001, sysdate);
+
+
+
+(since Bill Table mostly depends on other tables and values will be derived from other table we haven't created the subQuery for this deliverable.)
+The following data are just for insertion purpose)
+
+
+Insert into bill values(1001,400,60,0, 100001, 50003);
+Insert into bill values(1002,100,50,0, 100001, 50002);
+Insert into bill values(1003,400,60,0, 100001, 50001);
+Insert into bill values(1004,400,60,0, 100001, 50001);
+
+----------------------------------------------------------------------------------------------------
+
+Table altered after creation
+------------------------------------------------------------------------------------------------------------------------
+
+alter table rooms drop primary key;
+------------------------------------------------------------------------------------------------------------------------
+ALTER TABLE rooms
+ADD CONSTRAINT Pk_rooms PRIMARY KEY (Hotel_code, Room_code);
+-------------------------------------------------------------------------------------------------------------------------
+alter table reservation drop column room_code;
+
+-------------------------------------------------------------------------------------------------------------------------
+alter table reservations add room_code int;
+alter table reservations add room_code int;
+ALTER TABLE reservations
+ADD CONSTRAINT fk_reservations
+  FOREIGN KEY (hotel_code, room_code)
+  REFERENCES rooms(hotel_code, room_code);
+
+-------------------------------------------------------------------------------------------------------------------------
+
+
+UPDATE "IS420_1621_DULKABI1"."ROOM_TYPES" SET ROOM_DESC = 'single King' WHERE ROWID = 'AACPWHAAEAAAFlnAAA' AND ORA_ROWSCN = '1865368626';
+UPDATE "IS420_1621_DULKABI1"."ROOM_TYPES" SET ROOM_DESC = 'double King', NO_OF_BEDS = '2' WHERE ROWID = 'AACPWHAAEAAAFlnAAB' AND ORA_ROWSCN = '1865368626';
+UPDATE "IS420_1621_DULKABI1"."ROOM_TYPES" SET ROOM_DESC = 'Single Queen', NO_OF_BEDS = '1' WHERE ROWID = 'AACPWHAAEAAAFlnAAC' AND ORA_ROWSCN = '1865368626';
+UPDATE "IS420_1621_DULKABI1"."ROOM_TYPES" SET ROOM_DESC = 'double Queen' WHERE ROWID = 'AACPWHAAEAAAFlnAAD' AND ORA_ROWSCN = '1865368626';
+UPDATE "IS420_1621_DULKABI1"."ROOM_TYPES" SET ROOM_DESC = 'Single Suite' WHERE ROWID = 'AACPWHAAEAAAFlnAAE' AND ORA_ROWSCN = '1865368626';
+UPDATE "IS420_1621_DULKABI1"."ROOM_TYPES" SET ROOM_DESC = 'double suite' WHERE ROWID = 'AACPWHAAEAAAFlnAAF' AND ORA_ROWSCN = '1865368626';
+
+--------------------------------------------------------------------------------------------------------------------------
+alter table rooms drop COLUMN room_rate;
+--------------------------------------------------------------------------------------------------------------------------
+alter table Hotels add  Hotel_Status varchar2(30) default 'Open';
+Alter table bill RENAME to Bills;
+--------------------------------------------------------------------------------------------------------------------------
+alter table Bills modify 
+payment_type varchar2(10);
+alter table Bills add
+total_charged number;
+--------------------------------------------------------------------------------------------------------------------------
+

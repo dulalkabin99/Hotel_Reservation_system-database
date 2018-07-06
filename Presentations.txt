@@ -1,0 +1,123 @@
+
+--7--- Make Reservations
+
+-----------------------------------------------------------------------------------------------------
+select * from reservations where customer_code=2018025;
+
+set serveroutput on
+execute reserve_room(201802, 1004,'Batman patel','23-APR-18','24-APR-18', 2,'suite',2);
+
+
+set SERVEROUTPUT ON
+execute reserve_room(2018025, 104,'Batman patel','23-APR-18','24-APR-18', 2,'suite',2);
+
+
+
+set serveroutput on
+execute reserve_room(2018025, 1004,'Batman patel','23-APR-18','24-APR-18', 2,'conference',0);
+
+
+set serveroutput on
+execute reserve_room(2018025, 1004,'Batman patel','23-JUL-18','24-JUL-18', 2,'conference',0);
+----------------------------------------------------------------------------------------------------------
+
+--8 Find reservations
+
+
+
+select * from reservations  where guest_name = 'Lihn Lam';
+
+set SERVEROUTPUT ON
+declare
+re_code number;
+begin
+findreservation('Lihn Lam', '14-Apr-2018',1005, re_code);
+dbms_output.put_line(re_code);
+end;
+
+
+set SERVEROUTPUT ON
+declare
+re_code number;
+begin
+findreservation('Lihn Lam', '16-MAR-2018',1005, re_code);
+dbms_output.put_line(re_code);
+end;
+
+-------------------------------------------------------------------------------------------------------------
+--9 Cancel a reservation:
+
+select * from reservations where reservation_code= 100012;
+
+set serveroutput on;
+execute cancelreserrvation(10012);
+
+set serveroutput on;
+execute cancelreserrvation(100012);
+
+-------------------------------------------------------------------------------------------------------------
+--10.	ShowCancelations:
+
+select * from reservations where reservation_Stat= 'Cancelled';
+
+
+set SERVEROUTPUT ON
+execute show_cancellations;
+
+-----------------------------------------------------------------------------------------------------------
+
+-- 16.	Add a service to a reservation:
+
+select * from Room_services;
+select * from SERVICE_PERFORMED where RESERVATION_CODE=100022;
+
+Set SERVEROUTPUT ON
+execute add_service(1000,200);
+
+
+Set SERVEROUTPUT ON
+execute add_service(100022,200);
+
+----------------------------------------------------------------------------------------------------------
+
+-- 19.	 Total Services Income Report:
+
+set SERVEROUTPUT ON
+execute service_revenue (1008);
+
+
+
+set SERVEROUTPUT ON
+execute service_revenue (1009);
+
+
+
+set SERVEROUTPUT ON
+execute service_revenue (1005);
+
+---------------------------------------------------------------------------------------------------------
+
+22.	Room Checkout Report:
+
+
+-generate Bills
+
+
+Set SERVEROUTPUT ON
+execute GENERATE(10002);
+
+Set SERVEROUTPUT ON
+execute GENERATE(100002);
+
+------------------MAke Payment-------------------
+
+
+select * from Bills where RESERVATION_CODE=100029;
+
+Set SERVEROUTPUT ON
+execute MAKE_PAYMENT(100029,'cash');
+
+select * from Bills where RESERVATION_CODE=100002;
+
+Set SERVEROUTPUT ON
+execute MAKE_PAYMENT(100002,'credit');

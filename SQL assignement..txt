@@ -1,0 +1,11 @@
+update invoices set PAYMENT_TOTAL = 600, CREDIT_TOTAL = (INVOICE_TOTAL - PAYMENT_TOTAL), PAYMENT_DATE = TO_DATE(SYSDATE)
+where invoice_number= 'AX-014-027';
+
+select * from invoices where invoice_number = 'AX-014-027';
+
+
+update
+vendors set default_terms_id = (select invoices.TERMS_ID from invoices where
+                             INVOICES.credit_total > 0 and 
+                            INVOICES.payment_total = 0)
+        where vendors.vendor_id = invoices.vendor_id;
